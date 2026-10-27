@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Utility Search</title>
+    <style>
+        /* Modern Clean Styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+        }
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 16px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        /* Suggestions Dropdown Box */
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            list-style: none;
+            margin: 5px 0 0 0;
+            padding: 0;
+            z-index: 1000;
+            display: none; /* Pehle hidden rahega */
+        }
+        .suggestions-list li {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #334155;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+        .suggestions-list li:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="search-container">
+    <input type="text" id="searchBox" class="search-input" placeholder="Kuch bhi search karein (jaise: Aadhar download)..." autocomplete="off">
+    <ul id="suggestionsList" class="suggestions-list"></ul>
+</div>
+
+<script>
+    const searchBox = document.getElementById('searchBox');
+    const suggestionsList = document.getElementById('suggestionsList');
+
+    // Jab user kuch type karega
+    searchBox.addEventListener('input', function() {
+        let query = this.value.trim();
+
+        if (query.length === 0) {
+            suggestionsList.style.display = 'none';
+            suggestionsList.innerHTML = '';
+            return;
+        }
+
+        // Google ki public autocomplete API (JSONP alternative via fetch proxy ya direct CORS)
+        // Note: Browser CORS se bachne ke liye hum JSONP ya simple proxy/direct endpoint use karte hain
+        let url = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                let suggestions = data[1]; // Google suggestions array deta hai
+                suggestionsList.innerHTML = '';
+
+                if (suggestions.length > 0) {
+                    suggestionsList.style.display = 'block';
+                    suggestions.forEach(item => {
+                        let li = document.createElement('li');
+                        li.textContent = item;
+                        
+                        // Jab kisi suggestion par click ho
+                        li.addEventListener('click', function() {
+                            searchBox.value = item;
+                            suggestionsList.style.display = 'none';
+                            // Yahan user ko Google search page par bhej sakte hain ya action le sakte hain
+                            window.open(`https://www.google.com/search?q=${encodeURIComponent(item)}`, '_blank');
+                        });
+
+                        suggestionsList.appendChild(li);
+                    });
+                } else {
+                    suggestionsList.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                console.log('Error fetching suggestions:', err);
+            });
+    });
+
+    // Bahar click karne par dropdown gayab ho jaye
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            suggestionsList.style.display = 'none';
+        }
+    });
+
+    // Enter press karne par direct Google search khul jaye
+    searchBox.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            let query = this.value.trim();
+            if(query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                suggestionsList.style.display = 'none';
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
